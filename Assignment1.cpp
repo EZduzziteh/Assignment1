@@ -1,6 +1,18 @@
 
-
+//Hi Ibrahim, I did this with Visual Studio and it wouldn't compile for me without putting this next line in: 
 #define _CRT_SECURE_NO_WARNINGS
+
+
+//My modifications are all in blocks so you can search for them and they look like: 
+// 
+//   /* BEGIN MODIFICATION *************************************************/
+//		<MY MODIFICATIONS>
+//	 /* END MODIFICATION ***************************************************/
+// 
+//Also see line 514, I had an issue running the post-mod file.
+
+
+
 // -------------------------------------------
 // Program: parser.cpp 
 //
@@ -229,7 +241,6 @@ void error(int num)
 	case ERROR_UNTIL:
 		cout << "UNTIL expected";
 		break;
-
 	case ERROR_TODOWNTO:
 		cout << "TO or DOWNTO expected";
 		break;
@@ -240,7 +251,7 @@ void error(int num)
 		cout << "COLON expected";
 		break;
 	case ERROR_NUMBERORCONST:
-		cout << "NUMBER or CONST expected";
+		cout << "NUMBER or CONST expected"<<endl << "**Ibrahim, See Line 514**" << endl;
 		break;
 	/* END MODIFICATION ******************************************************************************/
 
@@ -500,7 +511,7 @@ void statement(symbol& sym, int tableinx)
 		if (sym == OFSYM) {
 			getsym(sym);
 			while (sym != CEND) {
-				if (sym == NUM || sym == CONSTANT  || sym == IDENT) {   //NOTE For Ibrahim: Maybe I misunderstood how this is supposed to work but:  I added this here to make the post-mod.pas file work, I think the problem is that in the pas file, you have A as a variable, which wasn't mentioned in the statement briefing. Briefing: <statement> ::= CASE <expression> OF {(<number> | <constant>):<statement>;} CEND  
+				if (sym == NUM || sym == CONSTANT   /* || sym == IDENT*/) {   //NOTE For Ibrahim: I probably just misunderstood how this is supposed to work but:  I added this here to make the post-mod.pas file work if you uncomment the sym==ident part, but that will make the error case pass as well. I think the problem is that in the pas file, you have A as a variable, which wasn't mentioned in the statement briefing. Briefing: <statement> ::= CASE <expression> OF {(<number> | <constant>):<statement>;} CEND  
 					getsym(sym);
 					if (sym == COLON) {
 						getsym(sym);
@@ -882,15 +893,7 @@ intype chartype(char ch)
 // -------------------------------------------
 int main(int argc, char* argv[])
 {
-	//std::cout << "Parsing File: " << argv[1] << endl << endl;;
-
-	//load file argv[1]
-
-	//string character = "if";
-	
-	
-
-	symbol sym;// = SEMICOLON;
+	symbol sym;
 	int i;
 	char filen[40];
 
