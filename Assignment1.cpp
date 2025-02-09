@@ -1,10 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
 
+
+#define _CRT_SECURE_NO_WARNINGS
 // -------------------------------------------
 // Program: parser.cpp 
 //
 // Description: This is a pascal like parser
-// Student: Your Name Here
+// Student: Sasha Greene
 // -------------------------------------------
 #include <cstdlib>
 #include <cstring>
@@ -44,6 +45,16 @@ using namespace std;
 #define ERROR_NUMBER_IDENT      18
 #define ERROR_NOPROCEDURE       19
 
+/* BEGIN MODIFICATION ******************************************************************************/ 
+
+#define ERROR_UNTIL 20
+#define ERROR_TODOWNTO 21
+#define ERROR_OF 22
+#define ERROR_NUMBERORCONST 23
+#define ERROR_COLON 24
+
+/* END MODIFICATION ******************************************************************************/
+
 // -------------------------------------------
 // some enumerated data types
 // -------------------------------------------
@@ -78,7 +89,20 @@ typedef enum tag_symbol
 	CALL,
 	THENSYM,
 	WHILESYM,
-	DOSYM
+	DOSYM,
+	/* BEGIN MODIFICATION ******************************************************************************/
+	ELSESYM,
+	REPEATSYM,
+	UNTILSYM,
+	FORSYM,
+	TOSYM,
+	DOWNTOSYM,
+	CASESYM,
+	WRITE,
+	WRITELN,
+	CEND,
+	OFSYM
+	/* END MODIFICATION ******************************************************************************/
 }symbol;
 
 // -------------------------------------------
@@ -200,6 +224,26 @@ void error(int num)
 	case ERROR_REL:
 		cout << "Relational operator expected";
 		break;
+
+	/* BEGIN MODIFICATION ******************************************************************************/
+	case ERROR_UNTIL:
+		cout << "UNTIL expected";
+		break;
+
+	case ERROR_TODOWNTO:
+		cout << "TO or DOWNTO expected";
+		break;
+	case ERROR_OF:
+		cout << "OF expected";
+		break;
+	case ERROR_COLON:
+		cout << "COLON expected";
+		break;
+	case ERROR_NUMBERORCONST:
+		cout << "NUMBER or CONST expected";
+		break;
+	/* END MODIFICATION ******************************************************************************/
+
 	}
 	cout << endl;
 	exit(1);
@@ -383,8 +427,154 @@ void statement(symbol& sym, int tableinx)
 			error(ERROR_THEN_SYM);
 		getsym(sym);
 		statement(sym, tableinx);
+
+		/* BEGIN MODIFICATION */
+		if (sym == ELSESYM) {
+			getsym(sym);
+			statement(sym, tableinx);
+		}
+		/* END MODIFICATION */
 		break;
+
+	/*BEGIN MODIFICATION*/
+	// REPEAT - UNTIL
+	case REPEATSYM:
+		getsym(sym);
+		statement(sym, tableinx);
+		while (sym == SEMICOLON) {
+			getsym(sym);
+			statement(sym, tableinx);
+		}
+
+		if (sym == UNTILSYM) {
+			getsym(sym);
+			condition(sym, tableinx);
+		}
+		else {
+			error(ERROR_UNTIL);
+		}
+
+		break;
+
+	// FOR - TO/DOWNTO - DO
+	case FORSYM:
+		getsym(sym);
+
+		if (sym != IDENT) {
+			error(ERROR_IDENT);
+		}
+
+		getsym(sym);
+
+		if (sym != ASSIGN) {
+			error(ERROR_ASSIGN);
+		}
+
+		getsym(sym);
+
+		expression(sym, tableinx);
+
+		if (sym == TOSYM || sym == DOWNTOSYM) {
+			getsym(sym);
+			expression(sym, tableinx);
+
+			if (sym == DOSYM) {
+				getsym(sym);
+				statement(sym, tableinx);
+			}
+			else {
+				error(ERROR_DO_SYM); 
+			}
+		}
+		else {
+			error(ERROR_TODOWNTO);
+		}
+
+		break;
+
+	// CASE - OF - CEND
+	case CASESYM:
+		getsym(sym);
+		expression(sym, tableinx);
+
+		if (sym == OFSYM) {
+			getsym(sym);
+			while (sym != CEND) {
+				if (sym == NUM || sym == CONSTANT  || sym == IDENT) {   //NOTE For Ibrahim: Maybe I misunderstood how this is supposed to work but:  I added this here to make the post-mod.pas file work, I think the problem is that in the pas file, you have A as a variable, which wasn't mentioned in the statement briefing. Briefing: <statement> ::= CASE <expression> OF {(<number> | <constant>):<statement>;} CEND  
+					getsym(sym);
+					if (sym == COLON) {
+						getsym(sym);
+						statement(sym, tableinx);
+						if (sym == SEMICOLON) {
+							getsym(sym);
+						}
+						else {
+							error(ERROR_SEMICOLON);
+						}
+					}
+					else {
+						error(ERROR_COLON);
+					}
+				}
+				else {
+					error(ERROR_NUMBERORCONST);
+				}
+			}
+			getsym(sym);
+		}
+		else {
+			error(ERROR_OF);
+		}
+		break;
+	case WRITE:
+		
+		getsym(sym);
+		if (sym != LPAREN) {
+			error(ERROR_LPAREN);
+		}
+
+		getsym(sym);
+		expression(sym, tableinx);
+
+		while (sym == COMMA) {
+			getsym(sym);
+			expression(sym, tableinx);
+		}
+
+		if (sym != RPAREN) {
+			error(ERROR_LPAREN);
+		}
+
+		getsym(sym);
+
+		break;
+
+	case WRITELN:
+
+		getsym(sym);
+		if (sym != LPAREN) {
+			error(ERROR_LPAREN);
+		}
+
+		getsym(sym);
+		expression(sym, tableinx);
+
+		while (sym == COMMA) {
+			getsym(sym);
+			expression(sym, tableinx);
+		}
+
+		if (sym != RPAREN) {
+			error(ERROR_LPAREN);
+		}
+		getsym(sym);
+		
+		break;
+
+	/*END MODIFICATION*/
 	}
+
+	
 }
 
 // -------------------------------------------
@@ -406,8 +596,10 @@ void condition(symbol& sym, int tableinx)
 			getsym(sym);
 			expression(sym, tableinx);
 		}
-		else
+		else {
+
 			error(ERROR_REL);
+		}
 	}
 }
 // -------------------------------------------
@@ -544,6 +736,38 @@ void getsym(symbol& sym)
 			sym = ENDSYM;
 		else if (strcmp(line, "IF") == 0)
 			sym = IFSYM;
+	
+
+	/*BEGIN MODIFICATION*/
+
+		else if (strcmp(line, "ELSE") == 0)
+			sym = ELSESYM;
+		else if (strcmp(line, "REPEAT") == 0)
+			sym = REPEATSYM;
+		else if (strcmp(line, "UNTIL") == 0)
+			sym = UNTILSYM;
+		else if (strcmp(line, "FOR") == 0)
+			sym = FORSYM; 
+		else if (strcmp(line, "TO") == 0)
+			sym = TOSYM;	
+		else if (strcmp(line, "DOWNTO") == 0)
+			sym = DOWNTOSYM;
+		else if (strcmp(line, "CASE") == 0)
+			sym = CASESYM;
+		else if (strcmp(line, "WRITE") == 0)
+			sym = WRITE;	
+		else if (strcmp(line, "WRITELN") == 0)
+			sym = WRITELN;
+		else if (strcmp(line, "OF") == 0) {
+			sym = OFSYM;
+		}
+		else if (strcmp(line, "CEND") == 0) {
+			sym = CEND;
+		}
+
+		/*END MODIFICATION*/
+
+
 		else if (strcmp(line, "ODD") == 0)
 			sym = ODDSYM;
 		else if (strcmp(line, "PROCEDURE") == 0)
@@ -658,9 +882,15 @@ intype chartype(char ch)
 // -------------------------------------------
 int main(int argc, char* argv[])
 {
-	std::cout << "test";
+	//std::cout << "Parsing File: " << argv[1] << endl << endl;;
 
-	symbol sym;
+	//load file argv[1]
+
+	//string character = "if";
+	
+	
+
+	symbol sym;// = SEMICOLON;
 	int i;
 	char filen[40];
 
